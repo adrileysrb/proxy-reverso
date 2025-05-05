@@ -27,6 +27,7 @@ app.get('/health', (req, res) => {
 app.use(async (req, res, next) => {
     const requestedPath = req.originalUrl;
     const fullBackendUrl = `${JAVA_BASE_URL}${JAVA_API_PREFIX}${requestedPath}`;
+    console.log('headers:', req.headers);
 
     const proxy = createProxyMiddleware({
         target: JAVA_BASE_URL,
@@ -34,7 +35,25 @@ app.use(async (req, res, next) => {
         pathRewrite: {
             [`^${requestedPath}`]: `${JAVA_API_PREFIX}${requestedPath}`
         },
-        logLevel: 'debug'
+        logLevel: 'debug',
+        on: {
+            proxyReq: (proxyReq, req, res) => {
+                console.log('Request backend:', {
+                    url: proxyReq.path,
+                    headers: proxyReq.getHeaders()
+                });
+            },
+            proxyRes: (proxyRes, req, res) => {
+                proxyRes.headers['x2-powered-by'] = 'Bom dia Holders';
+                console.log('Response backend:', {
+                    statusCode: proxyRes.statusCode,
+                    headers: proxyRes.headers
+                });
+            },
+            error: (err, req, res) => {
+                console.error('Proxy error:', err);
+            }
+        }
     });
 
     return proxy(req, res, next);
